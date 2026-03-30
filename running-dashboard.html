@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Running Statistics Dashboard - 5K Performance Analytics</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --deloitte-green: #86BC25;
+            --deloitte-dark: #0D1F2D;
+            --deloitte-white: #FFFFFF;
+            --deloitte-accent-blue: #3B82F6;
+            --deloitte-accent-red: #EF4444;
+            --deloitte-accent-purple: #8B5CF6;
+            --deloitte-accent-orange: #F59E0B;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0D1F2D 0%, #1E3A4A 50%, #2D5A87 100%);
+            color: var(--deloitte-white);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .bg-shape {
+            position: absolute;
+            opacity: 0.1;
+            animation: float 20s infinite linear;
+        }
+
+        .bg-shape:nth-child(1) {
+            top: 10%;
+            left: 10%;
+            width: 100px;
+            height: 100px;
+            background: var(--deloitte-green);
+            border-radius: 50%;
+            animation-delay: 0s;
+        }
+
+        .bg-shape:nth-child(2) {
+            top: 60%;
+            right: 15%;
+            width: 150px;
+            height: 150px;
+            background: var(--deloitte-accent-blue);
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            animation-delay: -7s;
+        }
+
+        .bg-shape:nth-child(3) {
+            bottom: 20%;
+            left: 20%;
+            width: 80px;
+            height: 80px;
+            background: var(--deloitte-accent-purple);
+            transform: rotate(45deg);
+            animation-delay: -14s;
+        }
+
+        @keyframes float {
+            0%, 100% { 
+                transform: translateY(0px) rotate(0deg); 
+            }
+            50% { 
+                transform: translateY(-20px) rotate(180deg); 
+            }
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+            min-width: 0;
+        }
+
+        .dashboard-header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: slideInDown 0.8s ease-out;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header-title i {
+            font-size: 2.5rem;
+            color: var(--deloitte-green);
+        }
+
+        .header-title h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--deloitte-green), #9BC53D);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-subtitle {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 5px;
+        }
+
+        .tabs-nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .tab-button {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: var(--deloitte-white);
+            padding: 15px 25px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95rem;
+        }
+
+        .tab-button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .tab-button.active {
+            background: linear-gradient(135deg, var(--deloitte-green), #9BC53D);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(134, 188, 37, 0.3);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 25px;
+            border-radius: 16px;
+            border-left: 4px solid var(--deloitte-green);
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.8s ease-out;
+            min-width: 0;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-card.blue { border-left-color: var(--deloitte-accent-blue); }
+        .stat-card.red { border-left-color: var(--deloitte-accent-red); }
+        .stat-card.purple { border-left-color: var(--deloitte-accent-purple); }
+        .stat-card.orange { border-left-color: var(--deloitte-accent-orange); }
+
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            flex-shrink: 0;
+        }
+
+        .stat-card.blue .stat-icon { color: var(--deloitte-accent-blue); }
+        .stat-card.red .stat-icon { color: var(--deloitte-accent-red); }
+        .stat-card.purple .stat-icon { color: var(--deloitte-accent-purple); }
+        .stat-card.orange .stat-icon { color: var(--deloitte-accent-orange); }
+        .stat-card .stat-icon { color: var(--deloitte-green); }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 8px;
+            font-weight: 500;
+            word-break: break-word;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--deloitte-white);
+            word-break: break-word;
+        }
+
+        .stat-subtext {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 5px;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 30px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            animation: fadeInUp 0.8s ease-out;
+            min-width: 0;
+        }
+
+        .chart-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--deloitte-green);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .route-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .route-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 30px;
+            border-radius: 16px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            animation: fadeInUp 0.8s ease-out;
+            min-width: 0;
+        }
+
+        .route-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(134, 188, 37, 0.2);
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .route-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .route-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(134, 188, 37, 0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--deloitte-green);
+            flex-shrink: 0;
+        }
+
+        .route-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: white;
+            word-break: break-word;
+        }
+
+        .route-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .route-stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        .route-stat-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+        }
+
+        .route-stat-value {
+            color: var(--deloitte-green);
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .records-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .record-card {
+            background: linear-gradient(135deg, rgba(134, 188, 37, 0.15), rgba(59, 130, 246, 0.15));
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(134, 188, 37, 0.3);
+            border-radius: 16px;
+            padding: 25px;
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.8s ease-out;
+            min-width: 0;
+        }
+
+        .record-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(134, 188, 37, 0.3);
+        }
+
+        .record-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--deloitte-green), #9BC53D);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+        }
+
+        .record-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 10px;
+            word-break: break-word;
+        }
+
+        .record-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--deloitte-green);
+            margin-bottom: 8px;
+        }
+
+        .record-date {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .record-subtext {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 4px;
+        }
+
+        .filter-section {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            color: var(--deloitte-green);
+        }
+
+        .filter-button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .filter-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .filter-button.active {
+            background: linear-gradient(135deg, var(--deloitte-green), #9BC53D);
+            border-color: var(--deloitte-green);
+        }
+
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 15px;
+            }
+
+            .dashboard-header {
+                padding: 20px;
+            }
+
+            .header-title h1 {
+                font-size: 1.5rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .route-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .records-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tabs-nav {
+                flex-direction: column;
+            }
+
+            .tab-button {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation">
+        <div class="bg-shape"></div>
+        <div class="bg-shape"></div>
+        <div class="bg-shape"></div>
+    </div>
+
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <div class="header-content">
+                <div>
+                    <div class="header-title">
+                        <i class="fas fa-running"></i>
+                        <div>
+                            <h1>5K Running Analytics Dashboard</h1>
+                            <div class="header-subtitle">February - March 2004 Performance Tracking</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tabs-nav">
+            <button class="tab-button active" onclick="showTab('overview')">
+                <i class="fas fa-chart-pie"></i> Overview
+            </button>
+            <button class="tab-button" onclick="showTab('routes')">
+                <i class="fas fa-map-marked-alt"></i> Routes
+            </button>
+            <button class="tab-button" onclick="showTab('performance')">
+                <i class="fas fa-chart-line"></i> Performance
+            </button>
+            <button class="tab-button" onclick="showTab('records')">
+                <i class="fas fa-trophy"></i> Records
+            </button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div class="tab-content active" id="overview">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-running"></i></div>
+                    <div class="stat-label">Total Runs</div>
+                    <div class="stat-value" id="totalRuns">35</div>
+                    <div class="stat-subtext">Feb 18 - Mar 29, 2004</div>
+                </div>
+                <div class="stat-card blue">
+                    <div class="stat-icon"><i class="fas fa-tachometer-alt"></i></div>
+                    <div class="stat-label">Average Pace</div>
+                    <div class="stat-value" id="avgPace">5:38</div>
+                    <div class="stat-subtext">per kilometer</div>
+                </div>
+                <div class="stat-card red">
+                    <div class="stat-icon"><i class="fas fa-fire"></i></div>
+                    <div class="stat-label">Total Calories</div>
+                    <div class="stat-value" id="totalCalories">17,829</div>
+                    <div class="stat-subtext">burned</div>
+                </div>
+                <div class="stat-card purple">
+                    <div class="stat-icon"><i class="fas fa-heartbeat"></i></div>
+                    <div class="stat-label">Average Heart Rate</div>
+                    <div class="stat-value" id="avgHR">159</div>
+                    <div class="stat-subtext">bpm</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-chart-area"></i> Weekly Summary
+                </div>
+                <canvas id="weeklySummaryChart"></canvas>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card orange">
+                    <div class="stat-icon"><i class="fas fa-route"></i></div>
+                    <div class="stat-label">Total Distance</div>
+                    <div class="stat-value">187.4</div>
+                    <div class="stat-subtext">kilometers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-mountain"></i></div>
+                    <div class="stat-label">Total Elevation</div>
+                    <div class="stat-value">1,597</div>
+                    <div class="stat-subtext">meters climbed</div>
+                </div>
+                <div class="stat-card blue">
+                    <div class="stat-icon"><i class="fas fa-stopwatch"></i></div>
+                    <div class="stat-label">Best 5K Time</div>
+                    <div class="stat-value">25:37</div>
+                    <div class="stat-subtext">Mar 28, 2004</div>
+                </div>
+                <div class="stat-card purple">
+                    <div class="stat-icon"><i class="fas fa-bolt"></i></div>
+                    <div class="stat-label">Fastest Lap (GE)</div>
+                    <div class="stat-value">2:35</div>
+                    <div class="stat-subtext">Mar 28, 2004</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Routes Tab -->
+        <div class="tab-content" id="routes">
+            <div class="route-cards">
+                <div class="route-card">
+                    <div class="route-header">
+                        <div class="route-icon"><i class="fas fa-tree"></i></div>
+                        <div class="route-name">Center Parcs</div>
+                    </div>
+                    <div class="route-stats">
+                        <div class="route-stat-item">
+                            <span class="route-stat-label">Total Runs</span>
+                            <span class="route-stat-value">2</span>
+                        </div>
+                        <div class="route-stat-item">
+                            <span class="route-stat-label">Avg Pace</span>
+                            <span class="route-stat-value">6:11 /km</span>
+                        </div>
+                        <div class="route-stat-item">
+                            <span class="route-stat-label">Avg Calories</span>
+                            <span class="route-stat-value">658</span>
+                        </div>
+                        <div class="route-stat-item">
+                            <span class="route-stat-label">Elevation</span>
+                            <span class="route-stat-value">24m</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="route-card">
+                    <div class="route-header">
+                        <div class="route-icon"><i class="fas fa-running"></i></div>
+                        <div class="route-name">Glen Emmets</div>
+                    </div>
+                    <div class="route-stats">
+                        <div class="route-stat-item">
+                            <span class="route-stat-label">Total Runs</span>
+                            <span class="route-stat-value">31</span>
+                        </div>
+                        <div class="route-stat-item">
+                            <span class="route-stat-label">Avg Pace</span>
+                            <span class="route-stat-value">5:39 /km</span>
+                        </div>
+                        <div class="route-stat-item">
+                            <span class="route-stat-label">Avg Calories</span>
+                            <span class="route-stat-value">535</span>
+                        </div>
+                        <div class="route-stat-item">
+                            <span class="route-stat-label">Avg Elevation</span>
+                            <span class="route-stat-value">48m</span>
+                        </div>
+                        <div class="route-stat-item">
+                            <span class="route-stat-label">Fastest Lap</span>
+                            <span class="route-stat-value">2:35</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="route-card">
+                    <div class="route-header">
+                        <div class="route-icon"><i class="fas fa-city"></i></div>
+                        <div class="route-name">Stephens Green</div>
+                    </div>
+                    <div class="route-stats">
+                        <div class="route-stat-item">
+                            <span class="route-stat-label">Total Runs</span>
+                            <span class="route-stat-value">2</span>
+                        </div>
+                        <div class="route-stat-item">
+                            <span class="route-stat-label">Avg Pace</span>
+                            <span class="route-stat-value">5:20 /km</span>
+                        </div>
+                        <div class="route-stat-item">
+                            <span class="route-stat-label">Avg Calories</span>
+                            <span class="route-stat-value">540</span>
+                        </div>
+                        <div class="route-stat-item">
+                            <span class="route-stat-label">Elevation</span>
+                            <span class="route-stat-value">3m (Flat)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-chart-bar"></i> Route Comparison
+                </div>
+                <canvas id="routeComparisonChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Performance Tab -->
+        <div class="tab-content" id="performance">
+            <div class="filter-section">
+                <span class="filter-label"><i class="fas fa-filter"></i> Filter by Route:</span>
+                <button class="filter-button active" onclick="filterPerformance('all')">All Routes</button>
+                <button class="filter-button" onclick="filterPerformance('Center Parcs')">Center Parcs</button>
+                <button class="filter-button" onclick="filterPerformance('Glen Emmets')">Glen Emmets</button>
+                <button class="filter-button" onclick="filterPerformance('Stephens Green')">Stephens Green</button>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-chart-line"></i> Pace Trend Over Time
+                </div>
+                <canvas id="paceTrendChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-heartbeat"></i> Heart Rate Trend
+                </div>
+                <canvas id="heartRateTrendChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-fire"></i> Calories Burned Over Time
+                </div>
+                <canvas id="caloriesTrendChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Records Tab -->
+        <div class="tab-content" id="records">
+            <div class="records-grid">
+                <div class="record-card">
+                    <div class="record-badge">🏆 Best 5K Time</div>
+                    <div class="record-title">Fastest 5 Kilometer</div>
+                    <div class="record-value">25:37</div>
+                    <div class="record-date">March 28, 2004 - Glen Emmets</div>
+                    <div class="record-subtext">2nd: 25:39 (Mar 27)</div>
+                    <div class="record-subtext">3rd: 25:41 (Mar 26)</div>
+                </div>
+
+                <div class="record-card">
+                    <div class="record-badge">⚡ Fastest Lap</div>
+                    <div class="record-title">Glen Emmets Best Lap</div>
+                    <div class="record-value">2:35</div>
+                    <div class="record-date">March 28, 2004</div>
+                    <div class="record-subtext">2nd: 2:37 (Mar 27)</div>
+                    <div class="record-subtext">3rd: 2:39 (Mar 26)</div>
+                </div>
+
+                <div class="record-card">
+                    <div class="record-badge">🎯 Best 1 Mile</div>
+                    <div class="record-title">Fastest Mile Split</div>
+                    <div class="record-value">7:59</div>
+                    <div class="record-date">March 28, 2004 - Glen Emmets</div>
+                    <div class="record-subtext">2nd: 8:01 (Mar 27)</div>
+                    <div class="record-subtext">3rd: 8:03 (Mar 26)</div>
+                </div>
+
+                <div class="record-card">
+                    <div class="record-badge">📊 Best 2 Mile</div>
+                    <div class="record-title">Fastest 2 Mile Split</div>
+                    <div class="record-value">17:45</div>
+                    <div class="record-date">February 25, 2004 - Glen Emmets</div>
+                    <div class="record-subtext">2nd: 17:52 (Feb 28)</div>
+                    <div class="record-subtext">3rd: 17:53 (Mar 2)</div>
+                </div>
+
+                <div class="record-card">
+                    <div class="record-badge">⚙️ Best 1K Split</div>
+                    <div class="record-title">Fastest 1 Kilometer</div>
+                    <div class="record-value">5:12</div>
+                    <div class="record-date">February 28, 2004 - Glen Emmets</div>
+                    <div class="record-subtext">2nd: 5:13 (Mar 3)</div>
+                    <div class="record-subtext">3rd: 5:17 (Mar 5)</div>
+                </div>
+
+                <div class="record-card">
+                    <div class="record-badge">💪 Most Calories</div>
+                    <div class="record-title">Highest Calorie Burn</div>
+                    <div class="record-value">667</div>
+                    <div class="record-date">February 18, 2004 - Center Parcs</div>
+                    <div class="record-subtext">2nd: 649 (Feb 19)</div>
+                    <div class="record-subtext">3rd: 632 (Feb 22)</div>
+                </div>
+
+            </div>
+
+            <div class="chart-container" style="margin-top: 30px;">
+                <div class="chart-title">
+                    <i class="fas fa-bolt"></i> Glen Emmets Lap Times Progression
+                </div>
+                <canvas id="lapTimesChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-medal"></i> Personal Best Progression (5K Times)
+                </div>
+                <canvas id="pbProgressionChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Running data
+        const runningData = [
+            {date: "18/02/2004", route: "Center Parcs", time: "0.36:12", distance: 5.84, pace: 6.12, elevation: 24, calories: 667, split5k: "0.31:02", split2mile: "0.19:41", split1mile: "0.09:28", split1km: "0.05:46", geLap: null, avgHR: 171, maxHR: 177},
+            {date: "19/02/2004", route: "Center Parcs", time: "0.35:05", distance: 5.68, pace: 6.10, elevation: 24, calories: 649, split5k: "0.30:50", split2mile: "0.19:41", split1mile: "0.09:35", split1km: "0.05:47", geLap: null, avgHR: 152, maxHR: 169},
+            {date: "22/02/2004", route: "Glen Emmets", time: "0.32:20", distance: 5.51, pace: 5.52, elevation: 47, calories: 632, split5k: "0.29:07", split2mile: "0.18:25", split1mile: "0.09:02", split1km: "0.05:27", geLap: "0.03:07", avgHR: 160, maxHR: 173},
+            {date: "25/02/2004", route: "Glen Emmets", time: "0.31:51", distance: 5.50, pace: 5.47, elevation: 47, calories: 630, split5k: "0.28:43", split2mile: "0.17:45", split1mile: "0.08:37", split1km: "0.05:19", geLap: "0.02:53", avgHR: 165, maxHR: 177},
+            {date: "26/02/2004", route: "Glen Emmets", time: "0.32:17", distance: 5.54, pace: 5.54, elevation: 47, calories: 628, split5k: "0.29:17", split2mile: "0.18:28", split1mile: "0.08:59", split1km: "0.05:21", geLap: "0.03:05", avgHR: 162, maxHR: 175},
+            {date: "27/02/2004", route: "Glen Emmets", time: "0.32:15", distance: 5.48, pace: 5.53, elevation: 47, calories: 628, split5k: "0.29:28", split2mile: "0.18:42", split1mile: "0.09:00", split1km: "0.05:19", geLap: "0.03:15", avgHR: 167, maxHR: 182},
+            {date: "28/02/2004", route: "Glen Emmets", time: "0.30:50", distance: 5.47, pace: 5.38, elevation: 47, calories: 628, split5k: "0.28:17", split2mile: "0.17:52", split1mile: "0.08:46", split1km: "0.05:12", geLap: "0.03:01", avgHR: 165, maxHR: 180},
+            {date: "02/03/2004", route: "Glen Emmets", time: "0.30:51", distance: 5.47, pace: 5.38, elevation: 47, calories: 628, split5k: "0.28:17", split2mile: "0.17:53", split1mile: "0.08:52", split1km: "0.05:18", geLap: "0.02:57", avgHR: null, maxHR: null},
+            {date: "03/03/2004", route: "Glen Emmets", time: "0.30:00", distance: 5.32, pace: 5.38, elevation: 47, calories: 610, split5k: "0.27:53", split2mile: "0.17:17", split1mile: "0.08:24", split1km: "0.05:13", geLap: "0.02:43", avgHR: null, maxHR: null},
+            {date: "04/03/2004", route: "Glen Emmets", time: "0.32:12", distance: 5.47, pace: 5.53, elevation: 47, calories: 610, split5k: "0.29:17", split2mile: "0.18:43", split1mile: "0.09:01", split1km: "0.05:22", geLap: "0.03:06", avgHR: 170, maxHR: 182},
+            {date: "05/03/2004", route: "Glen Emmets", time: "0.32:08", distance: 5.32, pace: 6.02, elevation: 47, calories: 611, split5k: "0.30:00", split2mile: "0.18:56", split1mile: "0.08:56", split1km: "0.05:17", geLap: "0.03:08", avgHR: 147, maxHR: 162},
+            {date: "06/03/2004", route: "Glen Emmets", time: "0.31:26", distance: 5.33, pace: 5.53, elevation: 47, calories: 612, split5k: "0.29:17", split2mile: "0.18:58", split1mile: "0.09:08", split1km: "0.05:27", geLap: "0.02:57", avgHR: 174, maxHR: 180},
+            {date: "07/03/2004", route: "Glen Emmets", time: "0.31:47", distance: 5.38, pace: 5.54, elevation: 47, calories: 612, split5k: "0.29:17", split2mile: "0.18:37", split1mile: "0.09:08", split1km: "0.05:32", geLap: "0.03:08", avgHR: 160, maxHR: 181},
+            {date: "08/03/2004", route: "Glen Emmets", time: "0.31:06", distance: 5.32, pace: 5.50, elevation: 47, calories: 611, split5k: "0.29:16", split2mile: "0.18:48", split1mile: "0.09:06", split1km: "0.05:29", geLap: "0.03:05", avgHR: 176, maxHR: 184},
+            {date: "09/03/2004", route: "Glen Emmets", time: "0.31:00", distance: 5.31, pace: 5.50, elevation: 47, calories: 610, split5k: "0.29:06", split2mile: "0.18:08", split1mile: "0.08:52", split1km: "0.05:26", geLap: "0.02:58", avgHR: 171, maxHR: 179},
+            {date: "10/03/2004", route: "Glen Emmets", time: "0.30:28", distance: 5.32, pace: 5.32, elevation: 47, calories: 611, split5k: "0.28:36", split2mile: "0.18:15", split1mile: "0.08:52", split1km: "0.05:20", geLap: "0.03:02", avgHR: 178, maxHR: 184},
+            {date: "11/03/2004", route: "Stephens Green", time: "0.31:06", distance: 5.68, pace: 5.28, elevation: 0, calories: 646, split5k: "0.27:14", split2mile: "0.17:27", split1mile: "0.08:36", split1km: "0.05:17", geLap: null, avgHR: 178, maxHR: 184},
+            {date: "12/03/2004", route: "Glen Emmets", time: "0.32:25", distance: 5.35, pace: 6.03, elevation: 47, calories: 619, split5k: "0.29:55", split2mile: "0.18:40", split1mile: "0.09:06", split1km: "0.05:26", geLap: "0.03:05", avgHR: 153, maxHR: 160},
+            {date: "13/03/2004", route: "Glen Emmets", time: "0.30:24", distance: 5.32, pace: 5.43, elevation: 47, calories: 610, split5k: "0.28:39", split2mile: "0.18:04", split1mile: "0.08:44", split1km: "0.05:13", geLap: "0.03:01", avgHR: 153, maxHR: 160},
+            {date: "14/03/2004", route: "Glen Emmets", time: "0.31:39", distance: 5.32, pace: 5.57, elevation: 47, calories: 610, split5k: "0.29:36", split2mile: "0.18:50", split1mile: "0.09:04", split1km: "0.05:30", geLap: "0.03:11", avgHR: 153, maxHR: 160},
+            {date: "15/03/2004", route: "Glen Emmets", time: "0.30:06", distance: 5.33, pace: 5.39, elevation: 47, calories: 611, split5k: "0.28:15", split2mile: "0.17:53", split1mile: "0.08:51", split1km: "0.05:29", geLap: "0.02:53", avgHR: 176, maxHR: 186},
+            {date: "16/03/2004", route: "Glen Emmets", time: "0.30:00", distance: 5.29, pace: 5.40, elevation: 47, calories: 607, split5k: "0.28:28", split2mile: "0.18:17", split1mile: "0.08:59", split1km: "0.05:27", geLap: "0.03:02", avgHR: 175, maxHR: 183},
+            {date: "17/03/2004", route: "Glen Emmets", time: "0.30:02", distance: 5.33, pace: 5.38, elevation: 47, calories: 611, split5k: "0.28:17", split2mile: "0.18:02", split1mile: "0.08:46", split1km: "0.05:19", geLap: "0.03:04", avgHR: 176, maxHR: 183},
+            {date: "18/03/2004", route: "Glen Emmets", time: "0.29:23", distance: 5.33, pace: 5.31, elevation: 47, calories: 611, split5k: "0.27:22", split2mile: "0.17:12", split1mile: "0.08:25", split1km: "0.05:09", geLap: "0.02:49", avgHR: 175, maxHR: 183},
+            {date: "19/03/2004", route: "Glen Emmets", time: "0.29:34", distance: 5.35, pace: 5.32, elevation: 40, calories: 400, split5k: "0.27:21", split2mile: "0.16:55", split1mile: "0.08:13", split1km: "0.05:02", geLap: "0.02:43", avgHR: 151, maxHR: 166},
+            {date: "20/03/2004", route: "Glen Emmets", time: "0.31:21", distance: 5.36, pace: 5.51, elevation: 44, calories: 439, split5k: "0.29:04", split2mile: "0.18:26", split1mile: "0.08:59", split1km: "0.05:30", geLap: "0.03:02", avgHR: 139, maxHR: 151},
+            {date: "21/03/2004", route: "Glen Emmets", time: "0.29:47", distance: 5.08, pace: 5.51, elevation: 32, calories: 423, split5k: "0.29:22", split2mile: "0.18:29", split1mile: "0.08:59", split1km: "0.05:32", geLap: "0.03:00", avgHR: 142, maxHR: 151},
+            {date: "22/03/2004", route: "Glen Emmets", time: "0.29:48", distance: 5.33, pace: 5.33, elevation: 48, calories: 443, split5k: "0.27:27", split2mile: "0.17:20", split1mile: "0.08:33", split1km: "0.05:14", geLap: "0.02:54", avgHR: 148, maxHR: 162},
+            {date: "23/03/2004", route: "Stephens Green", time: "0.28:51", distance: 5.57, pace: 5.11, elevation: 6, calories: 433, split5k: "0.25:52", split2mile: "0.16:25", split1mile: "0.08:07", split1km: "0.05:01", geLap: null, avgHR: 145, maxHR: 159},
+            {date: "24/03/2004", route: "Glen Emmets", time: "0.30:09", distance: 5.35, pace: 5.38, elevation: 56, calories: 443, split5k: "0.27:59", split2mile: "0.17:51", split1mile: "0.08:50", split1km: "0.05:21", geLap: "0.02:56", avgHR: 142, maxHR: 152},
+            {date: "25/03/2004", route: "Glen Emmets", time: "0.29:59", distance: 5.34, pace: 5.36, elevation: 72, calories: 432, split5k: "0.27:59", split2mile: "0.17:46", split1mile: "0.08:41", split1km: "0.05:17", geLap: "0.02:59", avgHR: 142, maxHR: 152},
+            {date: "26/03/2004", route: "Glen Emmets", time: "0.28:56", distance: 5.35, pace: 5.24, elevation: 47, calories: 427, split5k: "0.26:56", split2mile: "0.17:22", split1mile: "0.08:28", split1km: "0.05:06", geLap: "0.02:53", avgHR: 143, maxHR: 154},
+            {date: "27/03/2004", route: "Glen Emmets", time: "0.29:42", distance: 5.33, pace: 5.34, elevation: 56, calories: 437, split5k: "0.27:49", split2mile: "0.17:59", split1mile: "0.08:46", split1km: "0.05:17", geLap: "0.02:56", avgHR: 142, maxHR: 160},
+            {date: "28/03/2004", route: "Glen Emmets", time: "0.27:29", distance: 5.34, pace: 5.09, elevation: 55, calories: 401, split5k: "0.25:37", split2mile: "0.16:16", split1mile: "0.07:59", split1km: "0.04:53", geLap: "0.02:35", avgHR: 138, maxHR: 151},
+            {date: "29/03/2004", route: "Glen Emmets", time: "0.28:37", distance: 5.36, pace: 5.20, elevation: 50, calories: 428, split5k: "0.26:37", split2mile: "0.16:46", split1mile: "0.08:14", split1km: "0.04:58", geLap: "0.02:46", avgHR: 143, maxHR: 154}
+        ];
+
+        // Helper function to convert time string to seconds
+        function timeToSeconds(timeStr) {
+            if (!timeStr) return 0;
+            const parts = timeStr.replace('0.', '').split(':');
+            return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        }
+
+        // Helper function to format seconds to MM:SS
+        function secondsToTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Tab switching
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // Filter performance charts
+        let currentFilter = 'all';
+        function filterPerformance(route) {
+            currentFilter = route;
+            document.querySelectorAll('.filter-button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            updatePerformanceCharts();
+        }
+
+        // Chart configurations
+        const chartConfig = {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white',
+                        font: { size: 12 }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: 'rgba(255, 255, 255, 0.7)', font: { size: 10 } },
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                },
+                y: {
+                    ticks: { color: 'rgba(255, 255, 255, 0.7)', font: { size: 10 } },
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                }
+            }
+        };
+
+        // Weekly Summary Chart
+        const weeklySummary = {};
+        runningData.forEach(run => {
+            const date = new Date(run.date.split('/').reverse().join('-'));
+            const week = `Week ${Math.ceil(date.getDate() / 7)} - ${date.toLocaleString('default', { month: 'short' })}`;
+            if (!weeklySummary[week]) {
+                weeklySummary[week] = { runs: 0, calories: 0, distance: 0 };
+            }
+            weeklySummary[week].runs++;
+            weeklySummary[week].calories += run.calories;
+            weeklySummary[week].distance += run.distance;
+        });
+
+        new Chart(document.getElementById('weeklySummaryChart'), {
+            type: 'bar',
+            data: {
+                labels: Object.keys(weeklySummary),
+                datasets: [{
+                    label: 'Total Runs',
+                    data: Object.values(weeklySummary).map(w => w.runs),
+                    backgroundColor: 'rgba(134, 188, 37, 0.7)',
+                    borderColor: 'rgba(134, 188, 37, 1)',
+                    borderWidth: 2,
+                    yAxisID: 'y'
+                }, {
+                    label: 'Total Distance (km)',
+                    data: Object.values(weeklySummary).map(w => w.distance),
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 2,
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                ...chartConfig,
+                scales: {
+                    ...chartConfig.scales,
+                    y1: {
+                        type: 'linear',
+                        position: 'right',
+                        ticks: { color: 'rgba(255, 255, 255, 0.7)', font: { size: 10 } },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+
+        // Route Comparison Chart
+        const routeStats = {
+            'Center Parcs': { runs: 0, avgPace: 0, calories: 0 },
+            'Glen Emmets': { runs: 0, avgPace: 0, calories: 0 },
+            'Stephens Green': { runs: 0, avgPace: 0, calories: 0 }
+        };
+
+        runningData.forEach(run => {
+            routeStats[run.route].runs++;
+            routeStats[run.route].avgPace += run.pace;
+            routeStats[run.route].calories += run.calories;
+        });
+
+        Object.keys(routeStats).forEach(route => {
+            routeStats[route].avgPace = routeStats[route].avgPace / routeStats[route].runs;
+        });
+
+        new Chart(document.getElementById('routeComparisonChart'), {
+            type: 'radar',
+            data: {
+                labels: ['Number of Runs', 'Avg Pace (lower is better)', 'Total Calories'],
+                datasets: [{
+                    label: 'Center Parcs',
+                    data: [routeStats['Center Parcs'].runs, 10 - routeStats['Center Parcs'].avgPace, routeStats['Center Parcs'].calories / 100],
+                    backgroundColor: 'rgba(134, 188, 37, 0.2)',
+                    borderColor: 'rgba(134, 188, 37, 1)',
+                    borderWidth: 2
+                }, {
+                    label: 'Glen Emmets',
+                    data: [routeStats['Glen Emmets'].runs, 10 - routeStats['Glen Emmets'].avgPace, routeStats['Glen Emmets'].calories / 100],
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 2
+                }, {
+                    label: 'Stephens Green',
+                    data: [routeStats['Stephens Green'].runs, 10 - routeStats['Stephens Green'].avgPace, routeStats['Stephens Green'].calories / 100],
+                    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                    borderColor: 'rgba(139, 92, 246, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                ...chartConfig,
+                scales: {
+                    r: {
+                        ticks: { color: 'rgba(255, 255, 255, 0.7)', backdropColor: 'transparent' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        pointLabels: { color: 'white', font: { size: 11 } }
+                    }
+                }
+            }
+        });
+
+        // Performance Charts
+        let paceTrendChart, heartRateTrendChart, caloriesTrendChart;
+
+        function updatePerformanceCharts() {
+            const filteredData = currentFilter === 'all' 
+                ? runningData 
+                : runningData.filter(run => run.route === currentFilter);
+
+            const dates = filteredData.map(run => run.date.substring(0, 5));
+            const paces = filteredData.map(run => run.pace);
+            const hrs = filteredData.map(run => run.avgHR).filter(hr => hr !== null);
+            const calories = filteredData.map(run => run.calories);
+
+            // Pace Trend
+            if (paceTrendChart) paceTrendChart.destroy();
+            paceTrendChart = new Chart(document.getElementById('paceTrendChart'), {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'Pace (min/km)',
+                        data: paces,
+                        borderColor: 'rgba(134, 188, 37, 1)',
+                        backgroundColor: 'rgba(134, 188, 37, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    ...chartConfig,
+                    scales: {
+                        ...chartConfig.scales,
+                        y: {
+                            ...chartConfig.scales.y,
+                            reverse: true
+                        }
+                    }
+                }
+            });
+
+            // Heart Rate Trend
+            if (heartRateTrendChart) heartRateTrendChart.destroy();
+            const hrDates = filteredData.filter(run => run.avgHR !== null).map(run => run.date.substring(0, 5));
+            heartRateTrendChart = new Chart(document.getElementById('heartRateTrendChart'), {
+                type: 'line',
+                data: {
+                    labels: hrDates,
+                    datasets: [{
+                        label: 'Average HR (bpm)',
+                        data: hrs,
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: chartConfig
+            });
+
+            // Calories Trend
+            if (caloriesTrendChart) caloriesTrendChart.destroy();
+            caloriesTrendChart = new Chart(document.getElementById('caloriesTrendChart'), {
+                type: 'bar',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'Calories Burned',
+                        data: calories,
+                        backgroundColor: 'rgba(245, 158, 11, 0.7)',
+                        borderColor: 'rgba(245, 158, 11, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: chartConfig
+            });
+        }
+
+        updatePerformanceCharts();
+
+        // Lap Times Chart
+        const lapData = runningData
+            .filter(run => run.geLap !== null)
+            .map(run => ({ date: run.date.substring(0, 5), lap: timeToSeconds(run.geLap) }));
+
+        new Chart(document.getElementById('lapTimesChart'), {
+            type: 'line',
+            data: {
+                labels: lapData.map(d => d.date),
+                datasets: [{
+                    label: 'GE Lap Time (seconds)',
+                    data: lapData.map(d => d.lap),
+                    borderColor: 'rgba(134, 188, 37, 1)',
+                    backgroundColor: 'rgba(134, 188, 37, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                ...chartConfig,
+                scales: {
+                    ...chartConfig.scales,
+                    y: {
+                        ...chartConfig.scales.y,
+                        reverse: true,
+                        ticks: {
+                            ...chartConfig.scales.y.ticks,
+                            callback: function(value) {
+                                return secondsToTime(value);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // PB Progression Chart
+        const pbData = [];
+        let currentPB = Infinity;
+        runningData.forEach(run => {
+            const time5k = timeToSeconds(run.split5k);
+            if (time5k < currentPB && time5k > 0) {
+                currentPB = time5k;
+                pbData.push({ date: run.date.substring(0, 5), pb: currentPB });
+            }
+        });
+
+        new Chart(document.getElementById('pbProgressionChart'), {
+            type: 'line',
+            data: {
+                labels: pbData.map(d => d.date),
+                datasets: [{
+                    label: '5K Personal Best (MM:SS)',
+                    data: pbData.map(d => d.pb),
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    pointBackgroundColor: 'rgba(134, 188, 37, 1)'
+                }]
+            },
+            options: {
+                ...chartConfig,
+                scales: {
+                    ...chartConfig.scales,
+                    y: {
+                        ...chartConfig.scales.y,
+                        reverse: true,
+                        ticks: {
+                            ...chartConfig.scales.y.ticks,
+                            callback: function(value) {
+                                return secondsToTime(value);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
